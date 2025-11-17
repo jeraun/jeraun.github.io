@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>元素飞机大战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden; /* 防止页面滚动 */
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            height: calc(100vh - 150px); /* 限制高度防止滚动 */
+        }
+
+        .game-area {
+            flex: 3;
+            position: relative;
+            background-color: rgba(0, 0, 30, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 150, 255, 0.5);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(circle, #0a0a2a, #000015);
+        }
+
+        .game-ui {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto; /* 允许UI面板滚动 */
+            max-height: 100%;
+        }
+
+        .stats-panel {
+            background-color: rgba(0, 20, 40, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(0, 100, 200, 0.4);
+        }
+
+        .stats-panel h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #4fc3f7;
+            border-bottom: 1px solid #4fc3f7;
+            padding-bottom: 5px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #bbdefb;
+        }
+
+        .stat-value {
+            color: #ffcc80;
+        }
+
+        .controls-panel {
+            background-color: rgba(0, 20, 40, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(0, 100, 200, 0.4);
+        }
+
+        .controls-panel h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #4fc3f7;
+            border-bottom: 1px solid #4fc3f7;
+            padding-bottom: 5px;
+        }
+
+        .control-item {
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(0, 50, 100, 0.8);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 0 5px;
+            border: 1px solid #4fc3f7;
+        }
+
+        .game-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff8a00, #e52e71);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 138, 0, 0.7);
+        }
+
+        .damage-indicator {
+            position: absolute;
+            color: #ff5252;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+        }
+
+        .shield-effect {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid #00e5ff;
+            box-shadow: 0 0 15px #00e5ff;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 5px #00e5ff;
+            }
+
+            50% {
+                box-shadow: 0 0 20px #00e5ff;
+            }
+
+            100% {
+                box-shadow: 0 0 5px #00e5ff;
+            }
+        }
+
+        .element-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .physical {
+            background-color: #aaaaaa;
+        }
+
+        .electric {
+            background-color: #ffeb3b;
+        }
+
+        .true {
+            background-color: #f44336;
+        }
+
+        .laser {
+            background-color: #00e5ff;
+        }
+
+        .buff-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin: 2px;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .damage-mode {
+            color: #ffcc80;
+            font-weight: bold;
+        }
+
+        .pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            display: none;
+        }
+
+        .pause-text {
+            font-size: 3rem;
+            color: white;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>元素飞机大战</h1>
+        <p>使用方向键移动，空格键发射子弹，G键切换攻击模式，躲避敌机并收集增益效果！</p>
+    </div>
+
+    <div class="game-container">
+        <div class="game-area">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div id="pauseOverlay" class="pause-overlay">
+                <div class="pause-text">游戏暂停</div>
+            </div>
+            <div id="gameMessage" class="game-message">
+                <h2 id="messageTitle">游戏结束</h2>
+                <p id="messageText">你的飞机被击毁了！</p>
+                <button id="restartBtn" class="btn">重新开始</button>
+            </div>
+        </div>
+
+        <div class="game-ui">
+            <div class="stats-panel">
+                <h2>游戏状态</h2>
+                <div class="stat-row">
+                    <span class="stat-label">生命值:</span>
+                    <span id="healthValue" class="stat-value">200/200</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">攻击力:</span>
+                    <span id="attackValue" class="stat-value">50</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">防御力:</span>
+                    <span id="defenseValue" class="stat-value">20</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">当前攻击模式:</span>
+                    <span id="damageModeValue" class="stat-value damage-mode">物理伤害</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">击毁敌机:</span>
+                    <span id="killsValue" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">当前波次:</span>
+                    <span id="waveValue" class="stat-value">1</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">力场盾:</span>
+                    <span id="shieldValue" class="stat-value">可用</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">当前增益:</span>
+                    <div id="buffsValue" class="stat-value">无</div>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <h2>游戏控制</h2>
+                <div class="control-item">
+                    <span class="key">↑</span>
+                    <span class="key">↓</span>
+                    <span class="key">←</span>
+                    <span class="key">→</span>
+                    <span>移动飞机</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">空格</span>
+                    <span>发射子弹/激光</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">G</span>
+                    <span>切换攻击模式</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">C</span>
+                    <span>激活力场盾</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">P</span>
+                    <span>暂停/继续游戏</span>
+                </div>
+
+                <h2 style="margin-top: 20px;">元素伤害类型</h2>
+                <div class="control-item">
+                    <span class="element-indicator physical"></span>
+                    <span>物理伤害 - 默认伤害类型</span>
+                </div>
+                <div class="control-item">
+                    <span class="element-indicator electric"></span>
+                    <span>电击伤害 - 基于攻击力的25%</span>
+                </div>
+                <div class="control-item">
+                    <span class="element-indicator true"></span>
+                    <span>真实伤害 - 无视所有防御</span>
+                </div>
+                <div class="control-item">
+                    <span class="element-indicator laser"></span>
+                    <span>激光伤害 - 持续攻击伤害递增</span>
+                </div>
+
+                <h2 style="margin-top: 20px;">HP恢复道具</h2>
+                <div class="control-item">
+                    <span style="color: #00ff00">绿色光球</span>
+                    <span> - 击毁敌机有5%概率掉落，恢复50点生命值</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心类定义
+        class Game {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.width = canvas.width;
+                this.height = canvas.height;
+
+                // 游戏状态
+                this.isRunning = false;
+                this.isPaused = false;
+                this.gameOver = false;
+                this.wave = 1;
+                this.kills = 0;
+                this.shieldKills = 0;
+
+                // 游戏对象
+                this.player = new Player(this);
+                this.enemies = [];
+                this.bullets = [];
+                this.lasers = [];
+                this.shields = [];
+                this.buffs = [];
+                this.hpPacks = [];
+                this.damageIndicators = [];
+
+                // 游戏循环
+                this.lastTime = 0;
+                this.deltaTime = 0;
+
+                // 初始化
+                this.init();
+            }
+
+            init() {
+                // 初始化玩家
+                this.player = new Player(this);
+
+                // 清空游戏对象
+                this.enemies = [];
+                this.bullets = [];
+                this.lasers = [];
+                this.shields = [];
+                this.buffs = [];
+                this.hpPacks = [];
+                this.damageIndicators = [];
+
+                // 重置游戏状态
+                this.isRunning = true;
+                this.isPaused = false;
+                this.gameOver = false;
+                this.wave = 1;
+                this.kills = 0;
+                this.shieldKills = 0;
+
+                // 生成第一波敌人
+                this.spawnWave();
+
+                // 开始游戏循环
+                this.gameLoop(0);
+
+                // 更新UI
+                this.updateUI();
+
+                // 隐藏暂停界面
+                document.getElementById('pauseOverlay').style.display = 'none';
+            }
+
+            gameLoop(timestamp) {
+                if (!this.isRunning) return;
+
+                this.deltaTime = (timestamp - this.lastTime) / 1000;
+                this.lastTime = timestamp;
+
+                if (!this.isPaused && !this.gameOver) {
+                    this.update();
+                    this.render();
+                }
+
+                requestAnimationFrame(this.gameLoop.bind(this));
+            }
+
+            update() {
+                // 更新玩家
+                this.player.update(this.deltaTime);
+
+                // 更新敌人
+                this.enemies.forEach((enemy, index) => {
+                    enemy.update(this.deltaTime);
+
+                    // 检查敌人是否被消灭
+                    if (enemy.health <= 0) {
+                        // 只有当敌人被玩家消灭时才增加击杀数
+                        // 敌人超出屏幕不会增加击杀数
+                        if (enemy.isDestroyedByPlayer) {
+                            this.kills++;
+                            this.shieldKills++;
+
+                            // 5%概率掉落HP恢复道具
+                            if (Math.random() < 0.05) {
+                                this.hpPacks.push(new HPPack(
+                                    this,
+                                    enemy.x,
+                                    enemy.y
+                                ));
+                            }
+
+                            // 掉落增益效果
+                            if (Math.random() < enemy.buffDropRate) {
+                                this.buffs.push(new Buff(
+                                    this,
+                                    enemy.x,
+                                    enemy.y,
+                                    Buff.getRandomType(),
+                                    enemy.buffDuration
+                                ));
+                            }
+
+                            // 检查是否应该生成力场盾
+                            if (this.shieldKills >= 5) {
+                                this.shields.push(new Shield(this, this.player.x, this.player.y));
+                                this.shieldKills = 0;
+                            }
+                        }
+
+                        this.enemies.splice(index, 1);
+                    } else if (enemy.y > this.height) {
+                        // 敌人超出屏幕，直接移除，不计入击杀
+                        this.enemies.splice(index, 1);
+                    }
+                });
+
+                // 更新子弹
+                this.bullets.forEach((bullet, index) => {
+                    bullet.update(this.deltaTime);
+
+                    // 移除超出屏幕的子弹
+                    if (bullet.x < 0 || bullet.x > this.width ||
+                        bullet.y < 0 || bullet.y > this.height) {
+                        this.bullets.splice(index, 1);
+                    }
+                });
+
+                // 更新激光
+                this.lasers.forEach((laser, index) => {
+                    laser.update(this.deltaTime);
+
+                    // 移除过期的激光
+                    if (laser.duration <= 0) {
+                        this.lasers.splice(index, 1);
+                    }
+                });
+
+                // 更新力场盾
+                this.shields.forEach((shield, index) => {
+                    shield.update(this.deltaTime);
+
+                    // 移除过期的力场盾
+                    if (shield.duration <= 0) {
+                        this.shields.splice(index, 1);
+                    }
+                });
+
+                // 更新增益效果
+                this.buffs.forEach((buff, index) => {
+                    buff.update(this.deltaTime);
+
+                    // 移除过期的增益效果
+                    if (buff.duration <= 0) {
+                        this.buffs.splice(index, 1);
+                    }
+                });
+
+                // 更新HP恢复道具
+                this.hpPacks.forEach((hpPack, index) => {
+                    hpPack.update(this.deltaTime);
+
+                    // 移除过期的HP恢复道具
+                    if (hpPack.duration <= 0) {
+                        this.hpPacks.splice(index, 1);
+                    }
+                });
+
+                // 更新伤害指示器
+                this.damageIndicators.forEach((indicator, index) => {
+                    indicator.duration -= this.deltaTime;
+                    if (indicator.duration <= 0) {
+                        this.damageIndicators.splice(index, 1);
+                    }
+                });
+
+                // 检查碰撞
+                this.checkCollisions();
+
+                // 检查是否需要生成新一波敌人
+                if (this.enemies.length === 0) {
+                    this.wave++;
+                    this.spawnWave();
+                }
+
+                // 更新UI
+                this.updateUI();
+            }
+
+            render() {
+                // 清空画布
+                this.ctx.fillStyle = 'rgba(10, 10, 40, 0.2)';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                // 绘制星空背景
+                this.drawStars();
+
+                // 绘制游戏对象
+                this.bullets.forEach(bullet => bullet.render(this.ctx));
+                this.lasers.forEach(laser => laser.render(this.ctx));
+                this.enemies.forEach(enemy => enemy.render(this.ctx));
+                this.buffs.forEach(buff => buff.render(this.ctx));
+                this.hpPacks.forEach(hpPack => hpPack.render(this.ctx));
+                this.shields.forEach(shield => shield.render(this.ctx));
+                this.player.render(this.ctx);
+
+                // 绘制伤害指示器
+                this.damageIndicators.forEach(indicator => {
+                    this.ctx.fillStyle = indicator.color;
+                    this.ctx.font = 'bold 16px Arial';
+                    this.ctx.fillText(
+                        indicator.text,
+                        indicator.x,
+                        indicator.y
+                    );
+                });
+
+                // 绘制UI信息
+                this.drawUI();
+            }
+
+            drawStars() {
+                // 简单的星空背景
+                this.ctx.fillStyle = 'white';
+                for (let i = 0; i < 50; i++) {
+                    const x = Math.sin(i * 123.45) * this.width / 2 + this.width / 2;
+                    const y = Math.cos(i * 67.89) * this.height / 2 + this.height / 2;
+                    const size = Math.random() * 2;
+                    this.ctx.fillRect(x, y, size, size);
+                }
+            }
+
+            drawUI() {
+                // 绘制波次信息
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = 'bold 20px Arial';
+                this.ctx.fillText(`波次: ${this.wave}`, 20, 30);
+
+                // 绘制击杀数
+                this.ctx.fillText(`击杀: ${this.kills}`, 20, 60);
+
+                // 绘制玩家生命值
+                this.ctx.fillStyle = 'red';
+                this.ctx.fillRect(20, this.height - 30, 200, 15);
+                this.ctx.fillStyle = 'green';
+                this.ctx.fillRect(20, this.height - 30, (this.player.health / this.player.maxHealth) * 200, 15);
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '14px Arial';
+                this.ctx.fillText(`生命值: ${Math.max(0, this.player.health)}/${this.player.maxHealth}`, 25, this.height - 17);
+            }
+
+            checkCollisions() {
+                // 检查玩家子弹与敌人的碰撞
+                this.bullets.forEach((bullet, bIndex) => {
+                    if (bullet.isEnemy) {
+                        // 敌方子弹只与玩家碰撞
+                        if (this.isColliding(bullet, this.player)) {
+                            // 计算伤害
+                            const damage = bullet.calculateDamage(this.player);
+                            this.player.takeDamage(damage);
+
+                            // 添加伤害指示器
+                            this.damageIndicators.push({
+                                x: this.player.x,
+                                y: this.player.y - 20,
+                                text: `-${damage}`,
+                                color: bullet.getDamageColor(),
+                                duration: 1
+                            });
+
+                            // 移除子弹
+                            this.bullets.splice(bIndex, 1);
+                        }
+                    } else {
+                        // 玩家子弹只与敌人碰撞
+                        this.enemies.forEach((enemy, eIndex) => {
+                            if (this.isColliding(bullet, enemy)) {
+                                // 计算伤害
+                                const damage = bullet.calculateDamage(enemy);
+                                enemy.takeDamage(damage, bullet.damageType);
+                                enemy.isDestroyedByPlayer = true; // 标记为被玩家消灭
+
+                                // 添加伤害指示器
+                                this.damageIndicators.push({
+                                    x: enemy.x,
+                                    y: enemy.y - 20,
+                                    text: `-${damage}`,
+                                    color: bullet.getDamageColor(),
+                                    duration: 1
+                                });
+
+                                // 移除子弹
+                                this.bullets.splice(bIndex, 1);
+                            }
+                        });
+                    }
+                });
+
+                // 检查玩家激光与敌人的碰撞
+                this.lasers.forEach(laser => {
+                    if (!laser.isEnemy) {
+                        // 玩家激光只与敌人碰撞
+                        this.enemies.forEach((enemy, eIndex) => {
+                            if (this.isColliding(laser, enemy)) {
+                                // 计算伤害
+                                const damage = laser.calculateDamage(enemy);
+                                enemy.takeDamage(damage, laser.damageType);
+                                enemy.isDestroyedByPlayer = true; // 标记为被玩家消灭
+
+                                // 添加伤害指示器
+                                this.damageIndicators.push({
+                                    x: enemy.x,
+                                    y: enemy.y - 20,
+                                    text: `-${Math.round(damage)}`,
+                                    color: laser.getDamageColor(),
+                                    duration: 0.5
+                                });
+                            }
+                        });
+                    } else {
+                        // 敌方激光只与玩家碰撞
+                        if (this.isColliding(laser, this.player)) {
+                            // 计算伤害
+                            const damage = laser.calculateDamage(this.player);
+                            this.player.takeDamage(damage);
+
+                            // 添加伤害指示器
+                            this.damageIndicators.push({
+                                x: this.player.x,
+                                y: this.player.y - 20,
+                                text: `-${Math.round(damage)}`,
+                                color: laser.getDamageColor(),
+                                duration: 0.5
+                            });
+                        }
+                    }
+                });
+
+                // 检查玩家与敌人的碰撞
+                this.enemies.forEach((enemy, index) => {
+                    if (this.isColliding(this.player, enemy)) {
+                        // 计算伤害
+                        const damage = enemy.attack;
+                        this.player.takeDamage(damage);
+
+                        // 添加伤害指示器
+                        this.damageIndicators.push({
+                            x: this.player.x,
+                            y: this.player.y - 20,
+                            text: `-${damage}`,
+                            color: 'red',
+                            duration: 1
+                        });
+
+                        // 移除敌人
+                        this.enemies.splice(index, 1);
+                    }
+                });
+
+                // 检查玩家与增益效果的碰撞
+                this.buffs.forEach((buff, index) => {
+                    if (this.isColliding(this.player, buff)) {
+                        this.player.applyBuff(buff);
+                        this.buffs.splice(index, 1);
+                    }
+                });
+
+                // 检查玩家与HP恢复道具的碰撞
+                this.hpPacks.forEach((hpPack, index) => {
+                    if (this.isColliding(this.player, hpPack)) {
+                        this.player.health = Math.min(this.player.maxHealth, this.player.health + 50);
+                        this.hpPacks.splice(index, 1);
+
+                        // 添加恢复指示器
+                        this.damageIndicators.push({
+                            x: this.player.x,
+                            y: this.player.y - 20,
+                            text: `+50 HP`,
+                            color: '#00ff00',
+                            duration: 1
+                        });
+                    }
+                });
+
+                // 检查力场盾与子弹的碰撞
+                this.shields.forEach(shield => {
+                    this.bullets.forEach((bullet, index) => {
+                        if (this.isColliding(shield, bullet) && bullet.isEnemy) {
+                            // 力场盾抵消子弹
+                            this.bullets.splice(index, 1);
+                        }
+                    });
+
+                    this.enemies.forEach((enemy, index) => {
+                        if (this.isColliding(shield, enemy)) {
+                            // 力场盾对敌人造成伤害
+                            const damage = shield.damage;
+                            enemy.takeDamage(damage, 'physical');
+                            enemy.isDestroyedByPlayer = true; // 标记为被玩家消灭
+
+                            // 添加伤害指示器
+                            this.damageIndicators.push({
+                                x: enemy.x,
+                                y: enemy.y - 20,
+                                text: `-${damage}`,
+                                color: '#00e5ff',
+                                duration: 1
+                            });
+                        }
+                    });
+                });
+            }
+
+            isColliding(obj1, obj2) {
+                // 简单的矩形碰撞检测
+                return obj1.x < obj2.x + obj2.width &&
+                    obj1.x + obj1.width > obj2.x &&
+                    obj1.y < obj2.y + obj2.height &&
+                    obj1.y + obj1.height > obj2.y;
+            }
+
+            spawnWave() {
+                // 生成普通敌人
+                for (let i = 0; i < 5; i++) {
+                    this.enemies.push(new Enemy(
+                        this,
+                        Math.random() * (this.width - 60) + 30,
+                        -50,
+                        'normal'
+                    ));
+                }
+
+                // 生成精英敌人
+                for (let i = 0; i < 2; i++) {
+                    this.enemies.push(new Enemy(
+                        this,
+                        Math.random() * (this.width - 60) + 30,
+                        -100,
+                        'elite'
+                    ));
+                }
+
+                // 每10波生成一个Boss
+                if (this.wave % 10 === 0) {
+                    this.enemies.push(new Enemy(
+                        this,
+                        this.width / 2,
+                        -150,
+                        'boss'
+                    ));
+                }
+            }
+
+            updateUI() {
+                document.getElementById('healthValue').textContent =
+                    `${Math.max(0, this.player.health)}/${this.player.maxHealth}`;
+                document.getElementById('attackValue').textContent =
+                    Math.floor(this.player.attack).toString();
+                document.getElementById('defenseValue').textContent =
+                    Math.floor(this.player.defense).toString();
+                document.getElementById('damageModeValue').textContent =
+                    this.player.getDamageModeName();
+                document.getElementById('killsValue').textContent =
+                    this.kills.toString();
+                document.getElementById('waveValue').textContent =
+                    this.wave.toString();
+                document.getElementById('shieldValue').textContent =
+                    this.shields.length > 0 ? '激活中' : '可用';
+
+                // 更新增益效果显示
+                const buffsElement = document.getElementById('buffsValue');
+                buffsElement.innerHTML = '';
+
+                if (this.player.buffs.length === 0) {
+                    buffsElement.textContent = '无';
+                } else {
+                    this.player.buffs.forEach(buff => {
+                        const buffElement = document.createElement('span');
+                        buffElement.className = 'buff-indicator';
+                        buffElement.textContent = buff.type;
+                        buffsElement.appendChild(buffElement);
+                    });
+                }
+
+                // 显示游戏结束消息
+                if (this.gameOver) {
+                    document.getElementById('messageTitle').textContent = '游戏结束';
+                    document.getElementById('messageText').textContent = '你的飞机被击毁了！';
+                    document.getElementById('gameMessage').style.display = 'block';
+                }
+            }
+
+            pause() {
+                this.isPaused = !this.isPaused;
+                document.getElementById('pauseOverlay').style.display = this.isPaused ? 'flex' : 'none';
+            }
+        }
+
+        // 玩家类
+        class Player {
+            constructor(game) {
+                this.game = game;
+                this.width = 50;
+                this.height = 60;
+                this.x = game.width / 2 - this.width / 2;
+                this.y = game.height - 100;
+
+                // 基础属性
+                this.baseAttack = 50;
+                this.baseDefense = 20;
+                this.baseHealth = 200;
+                this.bulletSpeed = 2;
+
+                // 当前属性（受增益影响）
+                this.attack = this.baseAttack;
+                this.defense = this.baseDefense;
+                this.maxHealth = this.baseHealth;
+                this.health = this.baseHealth;
+
+                // 移动速度
+                this.speed = 300;
+
+                // 射击控制
+                this.shootCooldown = 0.2;
+                this.shootTimer = 0;
+
+                // 攻击模式
+                this.damageModes = ['physical', 'electric', 'true', 'laser'];
+                this.currentDamageMode = 0;
+
+                // 激光攻击相关
+                this.isFiringLaser = false;
+                this.laserCharge = 0;
+                this.laserMaxCharge = 3;
+                this.lastX = this.x;
+
+                // 增益效果
+                this.buffs = [];
+
+                // 输入控制
+                this.keys = {};
+
+                // 绑定键盘事件
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+
+                    // 切换攻击模式
+                    if (e.key === 'g' || e.key === 'G') {
+                        this.switchDamageMode();
+                    }
+
+                    // 激活力场盾
+                    if (e.key === 'c' || e.key === 'c') {
+                        this.activateShield();
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+
+                    // 停止激光攻击
+                    if (e.key === ' ' || e.key === 'Spacebar') {
+                        this.isFiringLaser = false;
+                        this.laserCharge = 0;
+                    }
+                });
+            }
+
+            update(deltaTime) {
+                // 记录上次位置
+                this.lastX = this.x;
+
+                // 更新增益效果
+                this.updateBuffs(deltaTime);
+
+                // 移动
+                if (this.keys['ArrowLeft'] || this.keys['a'] || this.keys['A']) {
+                    this.x -= this.speed * deltaTime;
+                }
+                if (this.keys['ArrowRight'] || this.keys['d'] || this.keys['D']) {
+                    this.x += this.speed * deltaTime;
+                }
+                if (this.keys['ArrowUp'] || this.keys['w'] || this.keys['W']) {
+                    this.y -= this.speed * deltaTime;
+                }
+                if (this.keys['ArrowDown'] || this.keys['s'] || this.keys['S']) {
+                    this.y += this.speed * deltaTime;
+                }
+
+                // 边界检查
+                this.x = Math.max(0, Math.min(this.game.width - this.width, this.x));
+                this.y = Math.max(0, Math.min(this.game.height - this.height, this.y));
+
+                // 射击
+                this.shootTimer -= deltaTime;
+
+                // 激光攻击模式
+                if (this.damageModes[this.currentDamageMode] === 'laser') {
+                    if ((this.keys[' '] || this.keys['Spacebar']) && this.shootTimer <= 0) {
+                        // 检查是否左右移动（打断激光）
+                        if (Math.abs(this.x - this.lastX) > 1) {
+                            this.laserCharge = 0;
+                        }
+
+                        // 开始或继续激光攻击
+                        this.isFiringLaser = true;
+                        this.laserCharge += deltaTime;
+
+                        if (this.laserCharge > this.laserMaxCharge) {
+                            this.laserCharge = this.laserMaxCharge;
+                        }
+
+                        // 创建激光
+                        const laserDamage = this.attack * (500 + this.laserCharge * 0.3);
+                        // 在Player类的update方法中，激光攻击部分
+                        this.game.lasers.push(new Laser(
+                            this.game,
+                            this.x + this.width / 2 - 2.5,
+                            0,  // 从画布顶部开始
+                            5,
+                            this.y,  // 高度为玩家y（从顶部到玩家飞机顶部）
+                            laserDamage,
+                            'laser',
+                            false
+                        ));
+
+                        this.shootTimer = 0.05; // 激光攻击频率更高
+                    } else if (!(this.keys[' '] || this.keys['Spacebar'])) {
+                        this.isFiringLaser = false;
+                        this.laserCharge = 0;
+                    }
+                }
+                // 其他攻击模式
+                else if ((this.keys[' '] || this.keys['Spacebar']) && this.shootTimer <= 0) {
+                    this.shoot();
+                    this.shootTimer = this.shootCooldown;
+                }
+            }
+
+            shoot() {
+                // 创建玩家子弹
+                this.game.bullets.push(new Bullet(
+                    this.game,
+                    this.x + this.width / 2 - 5,
+                    this.y,
+                    0,
+                    -500,
+                    this.attack,
+                    this.damageModes[this.currentDamageMode],
+                    false
+                ));
+            }
+
+            switchDamageMode() {
+                this.currentDamageMode = (this.currentDamageMode + 1) % this.damageModes.length;
+
+                // 切换模式时重置激光状态
+                this.isFiringLaser = false;
+                this.laserCharge = 0;
+            }
+
+            getDamageModeName() {
+                const names = {
+                    'physical': '物理伤害',
+                    'electric': '电击伤害',
+                    'true': '真实伤害',
+                    'laser': '激光伤害'
+                };
+                return names[this.damageModes[this.currentDamageMode]];
+            }
+
+            activateShield() {
+                // 检查是否已经有激活的力场盾
+                if (this.game.shields.length === 0) {
+                    this.game.shields.push(new Shield(this.game, this.x, this.y));
+                }
+            }
+
+            takeDamage(damage) {
+                // 计算实际伤害（考虑防御）
+                const actualDamage = Math.max(1, damage - this.defense * 0.5);
+                this.health -= actualDamage;
+
+                // 检查玩家是否死亡
+                if (this.health <= 0) {
+                    this.health = 0;
+                    this.game.gameOver = true;
+                    this.game.isRunning = false;
+                }
+            }
+
+            applyBuff(buff) {
+                // 应用增益效果
+                this.buffs.push({
+                    type: buff.type,
+                    duration: buff.duration,
+                    value: buff.value
+                });
+
+                // 根据增益类型更新属性
+                switch (buff.type) {
+                    case 'attack':
+                        this.attack = this.baseAttack * (1 + buff.value);
+                        break;
+                    case 'defense':
+                        this.defense = this.baseDefense * (1 + buff.value);
+                        break;
+                    case 'health':
+                        this.health = Math.min(this.maxHealth, this.health + this.maxHealth * buff.value);
+                        break;
+                    case 'speed':
+                        this.speed = 300 * (1 + buff.value);
+                        break;
+                }
+            }
+
+            updateBuffs(deltaTime) {
+                // 更新增益效果持续时间
+                this.buffs.forEach((buff, index) => {
+                    buff.duration -= deltaTime;
+
+                    // 移除过期的增益效果
+                    if (buff.duration <= 0) {
+                        // 恢复原始属性
+                        switch (buff.type) {
+                            case 'attack':
+                                this.attack = this.baseAttack;
+                                break;
+                            case 'defense':
+                                this.defense = this.baseDefense;
+                                break;
+                            case 'speed':
+                                this.speed = 300;
+                                break;
+                        }
+
+                        this.buffs.splice(index, 1);
+                    }
+                });
+            }
+
+            render(ctx) {
+                // 绘制玩家飞机
+                ctx.fillStyle = '#4fc3f7';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.width, this.y + this.height);
+                ctx.lineTo(this.x, this.y + this.height);
+                ctx.closePath();
+                ctx.fill();
+
+                // 绘制飞机细节
+                ctx.fillStyle = '#01579b';
+                ctx.fillRect(this.x + this.width / 2 - 5, this.y + 10, 10, 20);
+
+                // 绘制当前攻击模式指示器
+                ctx.fillStyle = this.getDamageColor();
+                ctx.fillRect(this.x + this.width / 2 - 10, this.y - 10, 20, 5);
+            }
+
+            getDamageColor() {
+                switch (this.damageModes[this.currentDamageMode]) {
+                    case 'physical': return '#aaaaaa';
+                    case 'electric': return '#ffeb3b';
+                    case 'true': return '#f44336';
+                    case 'laser': return '#00e5ff';
+                    default: return 'white';
+                }
+            }
+        }
+
+        // 敌人类
+        class Enemy {
+            constructor(game, x, y, type) {
+                this.game = game;
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.isDestroyedByPlayer = false; // 标记是否被玩家消灭
+
+                // 根据类型设置属性
+                switch (type) {
+                    case 'normal':
+                        this.width = 40;
+                        this.height = 40;
+                        this.attack = 50;
+                        this.defense = 20;
+                        this.health = 200;
+                        this.maxHealth = 200;
+                        this.speed = 100;
+                        this.damageType = 'physical';
+                        this.buffDropRate = 0.05;
+                        this.buffDuration = 5;
+                        this.color = '#ff5252';
+                        break;
+                    case 'elite':
+                        this.width = 50;
+                        this.height = 50;
+                        this.attack = 65;
+                        this.defense = 26;
+                        this.health = 260;
+                        this.maxHealth = 260;
+                        this.speed = 80;
+                        this.damageType = 'laser';
+                        this.buffDropRate = 0.15;
+                        this.buffDuration = 15;
+                        this.color = '#ff9800';
+                        break;
+                    case 'boss':
+                        this.width = 80;
+                        this.height = 80;
+                        this.attack = 85;
+                        this.defense = 34;
+                        this.health = 340;
+                        this.maxHealth = 340;
+                        this.speed = 60;
+                        this.damageType = 'true';
+                        this.buffDropRate = 0.65;
+                        this.buffDuration = 30;
+                        this.color = '#d50000';
+                        break;
+                }
+
+                // 激光攻击相关
+                this.laserCharge = 0;
+                this.laserMaxCharge = 3;
+                this.isChargingLaser = false;
+
+                // 射击控制
+                this.shootCooldown = 1;
+                this.shootTimer = Math.random() * this.shootCooldown;
+            }
+
+            update(deltaTime) {
+                // 移动
+                this.y += this.speed * deltaTime;
+
+                // 射击
+                this.shootTimer -= deltaTime;
+                if (this.shootTimer <= 0) {
+                    this.shoot();
+                    this.shootTimer = this.shootCooldown;
+                }
+
+                // 激光攻击充能
+                if (this.damageType === 'laser') {
+                    if (this.isChargingLaser) {
+                        this.laserCharge += deltaTime;
+                        if (this.laserCharge >= this.laserMaxCharge) {
+                            this.laserCharge = this.laserMaxCharge;
+                        }
+                    } else {
+                        this.laserCharge = 0;
+                    }
+                }
+            }
+
+            shoot() {
+                // 根据敌人类型发射不同的子弹
+                switch (this.damageType) {
+                    case 'physical':
+                        this.game.bullets.push(new Bullet(
+                            this.game,
+                            this.x + this.width / 2 - 5,
+                            this.y + this.height,
+                            0,
+                            300,
+                            this.attack,
+                            'physical',
+                            true
+                        ));
+                        break;
+                    case 'laser':
+                        // 激光攻击
+                        this.isChargingLaser = true;
+                        const laserDamage = this.attack * (0.1 + this.laserCharge * 0.3);
+                        // 在Enemy类的shoot方法中，激光攻击部分
+                        this.game.lasers.push(new Laser(
+                            this.game,
+                            this.x + this.width / 2 - 2.5,
+                            this.y + this.height,  // 从敌人底部开始
+                            5,
+                            this.game.height - (this.y + this.height),  // 高度为画布底部减去敌人底部
+                            laserDamage,
+                            'laser',
+                            true
+                        ));
+                        break;
+                    case 'true':
+                        // 真实伤害攻击
+                        this.game.bullets.push(new Bullet(
+                            this.game,
+                            this.x + this.width / 2 - 5,
+                            this.y + this.height,
+                            0,
+                            350,
+                            this.attack,
+                            'true',
+                            true
+                        ));
+                        break;
+                }
+            }
+
+            takeDamage(damage, damageType) {
+                // 计算元素抗性
+                let resistance = 0;
+                switch (damageType) {
+                    case 'physical':
+                        resistance = this.defense * 0.5;
+                        break;
+                    case 'electric':
+                        resistance = this.defense * 0.5;
+                        break;
+                    case 'laser':
+                        resistance = this.defense * 0.5;
+                        break;
+                    case 'true':
+                        resistance = 0; // 真实伤害无视防御
+                        break;
+                }
+
+                // 计算实际伤害
+                const actualDamage = Math.max(1, damage - resistance);
+                this.health -= actualDamage;
+
+                // 如果受到攻击，激光充能重置
+                if (this.damageType === 'laser') {
+                    this.isChargingLaser = false;
+                    this.laserCharge = 0;
+                }
+            }
+
+            render(ctx) {
+                // 绘制敌人
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.width, this.y);
+                ctx.lineTo(this.x + this.width / 2, this.y + this.height);
+                ctx.closePath();
+                ctx.fill();
+
+                // 绘制生命值条
+                const healthPercent = this.health / this.maxHealth;
+                ctx.fillStyle = 'red';
+                ctx.fillRect(this.x, this.y - 10, this.width, 5);
+                ctx.fillStyle = 'green';
+                ctx.fillRect(this.x, this.y - 10, this.width * healthPercent, 5);
+
+                // 如果是激光敌人且正在充能，显示充能条
+                if (this.damageType === 'laser' && this.isChargingLaser) {
+                    const chargePercent = this.laserCharge / this.laserMaxCharge;
+                    ctx.fillStyle = '#00e5ff';
+                    ctx.fillRect(this.x, this.y - 20, this.width * chargePercent, 5);
+                }
+            }
+        }
+
+        // 子弹类
+        class Bullet {
+            constructor(game, x, y, vx, vy, damage, damageType, isEnemy) {
+                this.game = game;
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.damage = damage;
+                this.damageType = damageType;
+                this.isEnemy = isEnemy;
+
+                // 根据伤害类型设置子弹属性
+                switch (damageType) {
+                    case 'physical':
+                        this.width = 10;
+                        this.height = 20;
+                        this.color = '#aaaaaa';
+                        break;
+                    case 'electric':
+                        this.width = 8;
+                        this.height = 15;
+                        this.color = '#ffeb3b';
+                        this.damage = damage * 0.25; // 电击伤害基于攻击力的25%
+                        break;
+                    case 'true':
+                        this.width = 12;
+                        this.height = 25;
+                        this.color = '#f44336';
+                        break;
+                    case 'laser':
+                        this.width = 6;
+                        this.height = 30;
+                        this.color = '#00e5ff';
+                        break;
+                }
+            }
+
+            update(deltaTime) {
+                this.x += this.vx * deltaTime;
+                this.y += this.vy * deltaTime;
+            }
+
+            calculateDamage(target) {
+                // 根据伤害类型计算实际伤害
+                switch (this.damageType) {
+                    case 'physical':
+                        return this.damage;
+                    case 'electric':
+                        return this.damage;
+                    case 'true':
+                        return this.damage; // 真实伤害无视防御
+                    case 'laser':
+                        return this.damage;
+                    default:
+                        return this.damage;
+                }
+            }
+
+            getDamageColor() {
+                switch (this.damageType) {
+                    case 'physical': return '#aaaaaa';
+                    case 'electric': return '#ffeb3b';
+                    case 'true': return '#f44336';
+                    case 'laser': return '#00e5ff';
+                    default: return 'white';
+                }
+            }
+
+            render(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // 为特殊子弹添加效果
+                if (this.damageType === 'electric') {
+                    ctx.strokeStyle = '#ffeb3b';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 10, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (this.damageType === 'laser') {
+                    ctx.fillStyle = 'rgba(0, 229, 255, 0.5)';
+                    ctx.fillRect(this.x - 5, this.y, this.width + 10, this.height);
+                }
+            }
+        }
+
+        // 激光类
+        class Laser {
+            constructor(game, x, y, width, height, damage, damageType, isEnemy) {
+                this.game = game;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.damage = damage;
+                this.damageType = damageType;
+                this.isEnemy = isEnemy;
+                this.duration = 0.1; // 激光持续时间
+                this.color = '#00e5ff';
+            }
+
+            update(deltaTime) {
+                this.duration -= deltaTime;
+
+                // 如果是玩家激光，跟随玩家
+                if (!this.isEnemy) {
+                    this.x = this.game.player.x + this.game.player.width / 2 - this.width / 2;
+                    // 更新激光高度为玩家当前的y
+                    this.height = this.game.player.y;
+                }
+            }
+            calculateDamage(target) {
+                // 激光伤害基于持续时间递增
+                return this.damage * this.game.deltaTime * 10;
+            }
+
+            getDamageColor() {
+                return '#00e5ff';
+            }
+
+            render(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // 添加发光效果
+                ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+                ctx.fillRect(this.x - 5, this.y, this.width + 10, this.height);
+            }
+        }
+
+        // 力场盾类
+        class Shield {
+            constructor(game, x, y) {
+                this.game = game;
+                this.x = x;
+                this.y = y;
+                this.radius = 40; // 4米 = 40像素
+                this.duration = 4; // 持续4秒
+                this.damage = game.player.defense * 1.3; // 基于防御力+30%的伤害
+            }
+
+            update(deltaTime) {
+                // 跟随玩家
+                this.x = this.game.player.x + this.game.player.width / 2;
+                this.y = this.game.player.y + this.game.player.height / 2;
+
+                // 更新持续时间
+                this.duration -= deltaTime;
+            }
+
+            render(ctx) {
+                ctx.strokeStyle = '#00e5ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 添加脉冲效果
+                ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // 增益效果类
+        class Buff {
+            constructor(game, x, y, type, duration) {
+                this.game = game;
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.duration = duration;
+                this.width = 20;
+                this.height = 20;
+
+                // 根据增益类型设置值和颜色
+                switch (type) {
+                    case 'attack':
+                        this.value = 0.5; // 增加50%攻击力
+                        this.color = '#ff5252';
+                        break;
+                    case 'defense':
+                        this.value = 0.5; // 增加50%防御力
+                        this.color = '#4fc3f7';
+                        break;
+                    case 'health':
+                        this.value = 0.3; // 恢复30%生命值
+                        this.color = '#66bb6a';
+                        break;
+                    case 'speed':
+                        this.value = 0.4; // 增加40%速度
+                        this.color = '#ffeb3b';
+                        break;
+                }
+            }
+
+            update(deltaTime) {
+                // 缓慢下落
+                this.y += 50 * deltaTime;
+
+                // 检查是否超出屏幕
+                if (this.y > this.game.height) {
+                    this.duration = 0;
+                }
+            }
+
+            render(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 添加发光效果
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2 + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            static getRandomType() {
+                const types = ['attack', 'defense', 'health', 'speed'];
+                return types[Math.floor(Math.random() * types.length)];
+            }
+        }
+
+        // HP恢复道具类
+        class HPPack {
+            constructor(game, x, y) {
+                this.game = game;
+                this.x = x;
+                this.y = y;
+                this.width = 20;
+                this.height = 20;
+                this.duration = 10; // 10秒后消失
+                this.color = '#00ff00';
+            }
+
+            update(deltaTime) {
+                // 缓慢下落
+                this.y += 50 * deltaTime;
+
+                // 更新持续时间
+                this.duration -= deltaTime;
+
+                // 检查是否超出屏幕
+                if (this.y > this.game.height) {
+                    this.duration = 0;
+                }
+            }
+
+            render(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 绘制加号
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.x + this.width / 2 - 2, this.y + 5, 4, 10);
+                ctx.fillRect(this.x + 5, this.y + this.height / 2 - 2, 10, 4);
+
+                // 添加发光效果
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2 + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        // 初始化游戏
+        window.onload = function () {
+            const canvas = document.getElementById('gameCanvas');
+            const game = new Game(canvas);
+
+            // 重新开始按钮
+            document.getElementById('restartBtn').addEventListener('click', function () {
+                document.getElementById('gameMessage').style.display = 'none';
+                game.init();
+            });
+
+            // 暂停功能
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'p' || e.key === 'P') {
+                    game.pause();
+                }
+            });
+        };
+    </script>
+</body>
+
+</html>
